@@ -1,0 +1,19 @@
+recieve:
+print("recieved")
+        Connected = True
+        while Connected:
+            try:
+                msg = rsa.decrypt(sock.recv(1024), self._privKey).decode("ascii")
+                print(msg.split(":", 1)[1])
+                if (msg.split(":", 1)[1]) != "quit":
+                    for key, _ in self._write_selector.select(0):
+                        if key.fileobj is not sock:
+                            key.fileobj.send(
+                                rsa.encrypt(msg.encode("ascii"), self._clientkey)
+                            )
+                else:
+                    Connected = False
+                    break
+            except Exception as e:
+                print(e)
+        self._client.close()

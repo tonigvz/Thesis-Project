@@ -1,0 +1,10 @@
+So far i tried sending the rsa using the rsa python module but with no luck,saving them to a file was possible but picking them up from that was impossible.
+*tried with the pycrypto module but they were ugly af but they seem to be the only way to export them to a file but i need to make a regex so when there are multiple it need to know from where to pick it up and where it ends
+*a simple "key" i wrote from a file ,it works as in it gets sent but then the connection closes itself.
+NEXT:i will try to fix the connection closing,also thinking of messaging the neuralmind guy how would i do the encryption if there are two files instead of one. and the guy i got the code from how could i get rsa ecnryption implemented.its worth a shot.
+and besides that idk
+*found a way to save and load rsa module keys ,but the rsa module refused to work ,reinstalled python from microsoft store,reinstalled everything and still not working in the licenta folder but on destop yes idk what is going on
+*found good rsa documentation reading that would have saved me a lot of time yesterday always read documentation no matter how boring it seems it has all the right answers you are searching on the web for
+2:24-15/01/23-FINALLY ABLE TO SEND ONE PUBLIC KEY THANK GOD.but also can now open it from file so we good gonna try both options to comapre
+23/01/23-made a little modification bc only the second message was sent and now trying to connect multiple clients with multiple keys,we shall see how it goes.
+1/3/23-see how many selectors there are at multiples times see what changes there are and if there is no selector to choose from at the end bc thats probably the problem just sock one find a way to redirect for connection.
