@@ -2,8 +2,7 @@ import selectors
 import socket
 import rsa
 import threading
-import random
-import os, glob
+import time
 
 
 class ChatServer:
@@ -24,6 +23,11 @@ class ChatServer:
         client, _ = sock.accept()
         print("Registering client...")
         client.send(self._pubKey.save_pkcs1(format="DER"))
+        # client.send("KEY".encode("ascii"))
+        # time.sleep(3)
+        # self._clientkey = sock.recv(1024)
+        # self._clientkey = rsa.PublicKey.load_pkcs1(self._stringkey, format="DER")
+        # print(self._clientkey)
         self._read_selector.register(
             client, selectors.EVENT_READ, self._receive_message
         )
@@ -36,7 +40,7 @@ class ChatServer:
         # print(msg.decode("utf8"))
         for key, _ in self._write_selector.select(0):
             if key.fileobj is not sock:
-                key.fileobj.send(rsa.encrypt(msg.encode("ascii"), self._clientkey))
+                key.fileobj.send(msg.encode("ascii"))
 
     def _init_server(self):
         """Initialises the server socket."""
@@ -64,10 +68,10 @@ class ChatServer:
             f"C:/Users/antonia/Desktop/Project/server_keys/privKey.pem", "rb"
         ) as f:
             self._privKey = rsa.PrivateKey.load_pkcs1(f.read())
-        with open(
-            f"C:/Users/antonia/Desktop/Project/client_keys/pubKey.pem", "rb"
-        ) as f:
-            self._clientkey = rsa.PublicKey.load_pkcs1(f.read())
+        # with open(
+        #     f"C:/Users/antonia/Desktop/Project/client_keys/pubKey.pem", "rb"
+        # ) as f:
+        #     self._clientkey = rsa.PublicKey.load_pkcs1(f.read())
         while True:
             for key, _ in self._read_selector.select():
                 sock, callback = key.fileobj, key.data
