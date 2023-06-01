@@ -34,6 +34,7 @@ class ChatClient:
         self._stringkey = self._socket.recv(1024)
         self._serverkey = rsa.PublicKey.load_pkcs1(self._stringkey, format="DER")
         s = self._socket.recv(1024).decode("ascii")
+        print(self._pubkey)
         if s == "KEY":
             self._socket.send(self._pubkey.save_pkcs1(format="DER"))
         self._threadsend.start()

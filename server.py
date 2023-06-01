@@ -3,6 +3,8 @@ import socket
 import rsa
 import threading
 
+clients = {}
+
 
 class ChatServer:
     def __init__(self, host, port):
@@ -25,6 +27,8 @@ class ChatServer:
         client.send("KEY".encode("ascii"))
         stringkey = client.recv(1024)
         self._clientkey = rsa.PublicKey.load_pkcs1(stringkey, format="DER")
+        print(self._clientkey)
+        clients[client] = self._clientkey
         self._read_selector.register(
             client, selectors.EVENT_READ, self._receive_message
         )
@@ -36,7 +40,7 @@ class ChatServer:
         print(msg.split(":", 1)[1])
         for key, _ in self._write_selector.select(0):
             if key.fileobj is not sock:
-                key.fileobj.send(rsa.encrypt(msg.encode("ascii"), self._clientkey))
+                key.fileobj.send(rsa.encrypt(msg.encode("ascii"), clients[key.fileobj]))
 
     def _init_server(self):
         """Initialises the server socket."""
