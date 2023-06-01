@@ -5,11 +5,9 @@ import rsa
 import sys
 from colorama import Fore
 
-with open(
-    f"C:/Users/antonia/Desktop/Project/client_keys/pubKey{choicec}.pem", "rb"
-) as f:
+with open(f"C:/Users/antonia/Desktop/Project/client_keys/pubKey.pem", "rb") as f:
     pubkey = rsa.PublicKey.load_pkcs1(f.read())
-with open("client_prikey.pem", "rb") as f:
+with open("C:/Users/antonia/Desktop/Project/client_keys/privKey.pem", "rb") as f:
     privkey = rsa.PrivateKey.load_pkcs1(f.read())
 
 

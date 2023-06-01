@@ -14,7 +14,6 @@ class ChatServer:
         self._th = threading.Thread(target=self._receive_message)
         self._username = None
         self._socket = None
-        self._client = None
         self._pubKey, self._privKey = None, None
         self._clientkey = None
         self._read_selector = selectors.DefaultSelector()
@@ -24,6 +23,7 @@ class ChatServer:
         """Callback function for when the server is ready to accept a connection."""
         client, _ = sock.accept()
         print("Registering client...")
+        client.send(self._pubKey.save_pkcs1(format="DER"))
         self._read_selector.register(
             client, selectors.EVENT_READ, self._receive_message
         )
@@ -31,11 +31,12 @@ class ChatServer:
 
     def _receive_message(self, sock):
         """Callback function for when a client socket is ready to receive."""
-        msg = sock.recv(1024)
-        print(msg.decode("utf8"))
+        msg = rsa.decrypt(sock.recv(1024), self._privKey).decode("ascii")
+        print(msg.split(":", 1)[1])
+        # print(msg.decode("utf8"))
         for key, _ in self._write_selector.select(0):
             if key.fileobj is not sock:
-                key.fileobj.send(msg)
+                key.fileobj.send(rsa.encrypt(msg.encode("ascii"), self._clientkey))
 
     def _init_server(self):
         """Initialises the server socket."""
@@ -55,6 +56,18 @@ class ChatServer:
 
         self._init_server()
         print("Running server...")
+        with open(
+            f"C:/Users/antonia/Desktop/Project/server_keys/pubKey.pem", "rb"
+        ) as f:
+            self._pubKey = rsa.PublicKey.load_pkcs1(f.read())
+        with open(
+            f"C:/Users/antonia/Desktop/Project/server_keys/privKey.pem", "rb"
+        ) as f:
+            self._privKey = rsa.PrivateKey.load_pkcs1(f.read())
+        with open(
+            f"C:/Users/antonia/Desktop/Project/client_keys/pubKey.pem", "rb"
+        ) as f:
+            self._clientkey = rsa.PublicKey.load_pkcs1(f.read())
         while True:
             for key, _ in self._read_selector.select():
                 sock, callback = key.fileobj, key.data
