@@ -7,8 +7,6 @@ numbers = []
 while len(numbers) < number_count:
     numbers.append(number_start)
     number_start += 1
-for filename in glob.glob(f"C:/Users/antonia/Desktop/Project/client_keys/*.pem"):
-    os.remove(filename)
 (cpubKey, cprivKey) = rsa.newkeys(1024)
 for i in numbers:
     with open(
@@ -20,7 +18,6 @@ for i in numbers:
     ) as f:
         f.write(cprivKey.save_pkcs1("PEM"))
 choice = random.choice(numbers)
-time.sleep(5)
 with open(
     f"C:/Users/antonia/Desktop/Project/client_keys/pubKey{choice}.pem", "rb"
 ) as f:
@@ -29,6 +26,8 @@ with open(
     f"C:/Users/antonia/Desktop/Project/client_keys/privKey{choice}.pem", "rb"
 ) as f:
     privKey = rsa.PrivateKey.load_pkcs1(f.read())
+for filename in glob.glob(f"C:/Users/antonia/Desktop/Project/client_keys/*.pem"):
+    os.remove(filename)
 
 
 class ChatClient:
