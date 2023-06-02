@@ -1,7 +1,5 @@
-import selectors
-import socket
-import rsa
-import threading
+import selectors, socket, rsa, threading
+
 
 clients = {}
 
@@ -11,7 +9,7 @@ class ChatServer:
         """Initialise the server attributes."""
         self._host = host
         self._port = port
-        self._th = threading.Thread(target=self._receive_message)
+        self._th = threading.Thread(target=self.receive)
         self._username = None
         self._socket = None
         self._pubKey, self._privKey = None, None
@@ -19,7 +17,7 @@ class ChatServer:
         self._read_selector = selectors.DefaultSelector()
         self._write_selector = selectors.DefaultSelector()
 
-    def _accept_connection(self, sock):
+    def accept(self, sock):
         """Callback function for when the server is ready to accept a connection."""
         client, _ = sock.accept()
         print("Registering client...")
@@ -27,14 +25,11 @@ class ChatServer:
         client.send("KEY".encode("ascii"))
         stringkey = client.recv(1024)
         self._clientkey = rsa.PublicKey.load_pkcs1(stringkey, format="DER")
-        print(self._clientkey)
         clients[client] = self._clientkey
-        self._read_selector.register(
-            client, selectors.EVENT_READ, self._receive_message
-        )
+        self._read_selector.register(client, selectors.EVENT_READ, self.receive)
         self._write_selector.register(client, selectors.EVENT_WRITE)
 
-    def _receive_message(self, sock):
+    def receive(self, sock):
         """Callback function for when a client socket is ready to receive."""
         msg = rsa.decrypt(sock.recv(1024), self._privKey).decode("ascii")
         print(msg.split(":", 1)[1])
@@ -42,7 +37,7 @@ class ChatServer:
             if key.fileobj is not sock:
                 key.fileobj.send(rsa.encrypt(msg.encode("ascii"), clients[key.fileobj]))
 
-    def _init_server(self):
+    def init(self):
         """Initialises the server socket."""
 
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -52,13 +47,13 @@ class ChatServer:
         self._read_selector.register(
             self._socket,
             selectors.EVENT_READ,
-            self._accept_connection,
+            self.accept,
         )
 
     def run(self):
         """Starts the server and accepts connections indefinitely."""
 
-        self._init_server()
+        self.init()
         print("Running server...")
         with open(
             f"C:/Users/antonia/Desktop/Project/server_keys/pubKey.pem", "rb"

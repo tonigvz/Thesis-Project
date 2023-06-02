@@ -1,11 +1,34 @@
-import threading, selectors, socket, rsa, sys
+import threading, selectors, socket, rsa, sys, random, os, glob, time
 from colorama import Fore
 
-
-with open(f"C:/Users/antonia/Desktop/Project/client_keys/pubKey.pem", "rb") as f:
-    pubkey = rsa.PublicKey.load_pkcs1(f.read())
-with open("C:/Users/antonia/Desktop/Project/client_keys/privKey.pem", "rb") as f:
-    privkey = rsa.PrivateKey.load_pkcs1(f.read())
+number_start = random.randint(1, 1000)
+number_count = random.randint(1, 20)
+numbers = []
+while len(numbers) < number_count:
+    numbers.append(number_start)
+    number_start += 1
+for filename in glob.glob(f"C:/Users/antonia/Desktop/Project/client_keys/*.pem"):
+    os.remove(filename)
+(cpubKey, cprivKey) = rsa.newkeys(1024)
+for i in numbers:
+    with open(
+        f"C:/Users/antonia/Desktop/Project/client_keys/pubKey{i}.pem", "wb+"
+    ) as f:
+        f.write(cpubKey.save_pkcs1("PEM"))
+    with open(
+        f"C:/Users/antonia/Desktop/Project/client_keys/privKey{i}.pem", "wb+"
+    ) as f:
+        f.write(cprivKey.save_pkcs1("PEM"))
+choice = random.choice(numbers)
+time.sleep(5)
+with open(
+    f"C:/Users/antonia/Desktop/Project/client_keys/pubKey{choice}.pem", "rb"
+) as f:
+    pubKey = rsa.PublicKey.load_pkcs1(f.read())
+with open(
+    f"C:/Users/antonia/Desktop/Project/client_keys/privKey{choice}.pem", "rb"
+) as f:
+    privKey = rsa.PrivateKey.load_pkcs1(f.read())
 
 
 class ChatClient:
@@ -13,14 +36,14 @@ class ChatClient:
         self._host = host
         self._port = port
         self._username = username
-        self._pubkey, self._privkey = pubkey, privkey
+        self._pubkey, self._privkey = pubKey, privKey
         self._serverkey = None
-        self._threadsend = threading.Thread(target=self._input_and_send_loop)
+        self._threadsend = threading.Thread(target=self.input)
         self._threadrecv = threading.Thread(target=self.recieve)
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._read_selector = selectors.DefaultSelector()
 
-    def _input_and_send_loop(self):
+    def input(self):
         while True:
             msg = input()
             final = username + ":" + msg
@@ -34,7 +57,6 @@ class ChatClient:
         self._stringkey = self._socket.recv(1024)
         self._serverkey = rsa.PublicKey.load_pkcs1(self._stringkey, format="DER")
         s = self._socket.recv(1024).decode("ascii")
-        print(self._pubkey)
         if s == "KEY":
             self._socket.send(self._pubkey.save_pkcs1(format="DER"))
         self._threadsend.start()
