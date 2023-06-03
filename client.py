@@ -87,6 +87,10 @@ class ChatClient:
                 print("you closed the connection!")
                 self.socket.close()
                 break
+            except socket.error:
+                print("server was closed")
+                self.socket.close()
+                break
             except:
                 print("an error occured!")
                 self.socket.close()

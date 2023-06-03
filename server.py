@@ -34,7 +34,6 @@ class ChatServer:
         """Callback function for when a client socket is ready to receive."""
         try:
             msg = rsa.decrypt(sock.recv(buffer_size), self.privKey).decode("ascii")
-            print(msg.split(":", 1)[1])
             if msg.split(":", 1)[1] != "quit":
                 for key, _ in self.write_selector.select(0):
                     if key.fileobj is not sock:
@@ -42,7 +41,7 @@ class ChatServer:
                             rsa.encrypt(msg.encode("ascii"), clients[key.fileobj])
                         )
         except ConnectionResetError:
-            print("user closed the connection")
+            print("client disconnected")
             self.read_selector.unregister(sock)
             self.write_selector.unregister(sock)
             del clients[sock]
