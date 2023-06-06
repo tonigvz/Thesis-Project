@@ -1,4 +1,4 @@
-import selectors, socket, rsa, threading
+import selectors, socket, rsa, threading, hashlib
 
 
 clients = {}
@@ -26,7 +26,12 @@ class ChatServer:
         client.send("KEY".encode("ascii"))
         stringkey = client.recv(buffer_size)
         self.clientkey = rsa.PublicKey.load_pkcs1(stringkey, format="DER")
-        clients[client] = self.clientkey
+        client.send("HASH".encode("ascii"))
+        hash_clientkey = hashlib.sha256(stringkey).hexdigest()
+        hashkey = client.recv(buffer_size).decode()
+        if hashkey == hash_clientkey:
+            print("verification successful")
+            clients[client] = self.clientkey
         self.read_selector.register(client, selectors.EVENT_READ, self.receive)
         self.write_selector.register(client, selectors.EVENT_WRITE)
 

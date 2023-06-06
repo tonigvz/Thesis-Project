@@ -1,4 +1,4 @@
-import threading, selectors, socket, rsa, sys, random, os, glob, time
+import threading, selectors, socket, rsa, random, os, glob, hashlib
 from colorama import Fore
 
 buffer_size = 1024
@@ -63,9 +63,13 @@ class ChatClient:
         self.socket.connect((self.host, self.port))
         self.stringkey = self.socket.recv(buffer_size)
         self.serverkey = rsa.PublicKey.load_pkcs1(self.stringkey, format="DER")
+        hash_key = hashlib.sha256(self.pubkey.save_pkcs1(format="DER")).hexdigest()
         s = self.socket.recv(buffer_size).decode("ascii")
         if s == "KEY":
             self.socket.send(self.pubkey.save_pkcs1(format="DER"))
+        h = self.socket.recv(buffer_size).decode("ascii")
+        if h == "HASH":
+            self.socket.send(hash_key.encode())
         self.threadsend.start()
         self.threadrecv.start()
 
