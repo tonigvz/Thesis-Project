@@ -32,8 +32,11 @@ class ChatServer:
         if hashkey == hash_clientkey:
             print("verification successful")
             clients[client] = self.clientkey
-        self.read_selector.register(client, selectors.EVENT_READ, self.receive)
-        self.write_selector.register(client, selectors.EVENT_WRITE)
+            self.read_selector.register(client, selectors.EVENT_READ, self.receive)
+            self.write_selector.register(client, selectors.EVENT_WRITE)
+        else:
+            print("verification failed")
+            client.close()
 
     def receive(self, sock):
         """Callback function for when a client socket is ready to receive."""
@@ -54,7 +57,6 @@ class ChatServer:
 
     def init(self):
         """Initialises the server socket."""
-
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind((self.host, self.port))
         self.socket.listen()
@@ -67,7 +69,6 @@ class ChatServer:
 
     def run(self):
         """Starts the server and accepts connections indefinitely."""
-
         self.init()
         print("Running server...")
         with open(
