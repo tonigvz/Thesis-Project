@@ -1,7 +1,7 @@
 import threading, selectors, socket, rsa, random, os, glob, hashlib
 from colorama import Fore
 
-buffer_size = 1024
+buffer_size = 2048
 
 
 class ChatClient:
@@ -42,6 +42,11 @@ class ChatClient:
             f"C:/Users/antonia/Desktop/Project/client_keys/privKey{choice}.pem", "rb"
         ) as f:
             self.privkey = rsa.PrivateKey.load_pkcs1(f.read())
+        message = "f9dFd!LVC76zmh"
+        signature = rsa.sign(message.encode(), self.privkey, "SHA-256")
+        self.hash_key = hashlib.sha256(self.pubkey.save_pkcs1(format="DER")).hexdigest()
+        with open("signature", "wb") as f:
+            f.write(signature)
         for filename in glob.glob(
             f"C:/Users/antonia/Desktop/Project/client_keys/*.pem"
         ):
@@ -63,13 +68,14 @@ class ChatClient:
         self.socket.connect((self.host, self.port))
         self.stringkey = self.socket.recv(buffer_size)
         self.serverkey = rsa.PublicKey.load_pkcs1(self.stringkey, format="DER")
-        hash_key = hashlib.sha256(self.pubkey.save_pkcs1(format="DER")).hexdigest()
-        s = self.socket.recv(buffer_size).decode("ascii")
-        if s == "KEY":
+        k = self.socket.recv(buffer_size).decode("ascii")
+        if k == "KEY":
             self.socket.send(self.pubkey.save_pkcs1(format="DER"))
         h = self.socket.recv(buffer_size).decode("ascii")
         if h == "HASH":
-            self.socket.send(hash_key.encode())
+            self.socket.send(self.hash_key.encode())
+        c = self.socket.recv(buffer_size).decode("ascii")
+        print(c)
         self.threadsend.start()
         self.threadrecv.start()
 
@@ -95,8 +101,12 @@ class ChatClient:
                 print("server was closed")
                 self.socket.close()
                 break
+            except rsa.DecryptionError:
+                print("verification failed")
+                self.socket.close()
+                break
             except:
-                print("an error occured!")
+                print("an error occured")
                 self.socket.close()
                 break
 

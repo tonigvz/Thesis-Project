@@ -1,8 +1,8 @@
-import selectors, socket, rsa, threading, hashlib
+import selectors, socket, rsa, threading, hashlib, os
 
 
 clients = {}
-buffer_size = 1024
+buffer_size = 2048
 
 
 class ChatServer:
@@ -29,12 +29,20 @@ class ChatServer:
         client.send("HASH".encode("ascii"))
         hash_clientkey = hashlib.sha256(stringkey).hexdigest()
         hashkey = client.recv(buffer_size).decode()
-        if hashkey == hash_clientkey:
-            print("verification successful")
-            clients[client] = self.clientkey
-            self.read_selector.register(client, selectors.EVENT_READ, self.receive)
-            self.write_selector.register(client, selectors.EVENT_WRITE)
-        else:
+        message = "f9dFd!LVC76zmh"
+        with open("C:/Users/antonia/Desktop/Project/signature", "rb") as f:
+            signature = f.read()
+        os.remove("C:/Users/antonia/Desktop/Project/signature")
+        try:
+            if hashkey == hash_clientkey and rsa.verify(
+                message.encode(), signature, self.clientkey
+            ):
+                print("verification successful")
+                clients[client] = self.clientkey
+                client.send("connection was established".encode("ascii"))
+                self.read_selector.register(client, selectors.EVENT_READ, self.receive)
+                self.write_selector.register(client, selectors.EVENT_WRITE)
+        except rsa.VerificationError:
             print("verification failed")
             client.close()
 
@@ -48,7 +56,7 @@ class ChatServer:
                         key.fileobj.send(
                             rsa.encrypt(msg.encode("ascii"), clients[key.fileobj])
                         )
-        except ConnectionResetError:
+        except (ConnectionResetError, rsa.DecryptionError):
             print("client disconnected")
             self.read_selector.unregister(sock)
             self.write_selector.unregister(sock)
