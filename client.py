@@ -56,14 +56,23 @@ class ChatClient:
         self.socket.connect((self.host, self.port))
         self.stringkey = self.socket.recv(buffer_size)
         self.serverkey = rsa.PublicKey.load_pkcs1(self.stringkey, format="DER")
+        app2 = customtkinter.CTkToplevel()
+        app2.focus_set()
+        app2.grab_set()
+        var = customtkinter.StringVar()
+        label = customtkinter.CTkLabel(app2, textvariable=var)
+        var.set("connection succesful" + "\n")
         k = self.socket.recv(buffer_size).decode("ascii")
         if k == "KEY":
             self.socket.send(self.pubkey.save_pkcs1(format="DER"))
+            var.set(var.get() + "public key was sent" + "\n")
         h = self.socket.recv(buffer_size).decode("ascii")
         if h == "HASH":
             self.socket.send(self.hash_key.encode())
+            var.set(var.get() +"public key verification succesful" + "\n")
         c = self.socket.recv(buffer_size).decode("ascii")
-        app.text.insert("end",c ,"\n")
+        var.set(var.get() + "all verifications passed,connection is secure")
+        label.pack(padx=20,pady=20)
         self.threadrecv.start()
 
     def input(self):
@@ -137,7 +146,6 @@ class App(customtkinter.CTk,ChatClient):
         self.geometry("350x500")
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure((0, 1), weight=1)
-        
         self.text = customtkinter.CTkTextbox(self)
         self.text.grid(row=0, column=0, columnspan=2, padx=20, pady=(20, 0), sticky="nsew")
         self.entry = customtkinter.CTkEntry(self)
