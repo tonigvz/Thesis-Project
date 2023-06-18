@@ -1,8 +1,8 @@
-import threading, selectors, socket, rsa, random, os, glob, hashlib
+import threading, selectors, socket, rsa, random, os, glob, hashlib,customtkinter
 from colorama import Fore
 
 buffer_size = 2048
-
+username = ""
 
 class ChatClient:
     def __init__(self, host, port):
@@ -52,18 +52,6 @@ class ChatClient:
         ):
             os.remove(filename)
 
-    def input(self):
-        while True:
-            msg = input()
-            final = username + ":" + msg
-            try:
-                self.socket.send((rsa.encrypt(final.encode("ascii"), self.serverkey)))
-                if msg == "quit":
-                    self.socket.close()
-                    break
-            except:
-                break
-
     def connect(self):
         self.socket.connect((self.host, self.port))
         self.stringkey = self.socket.recv(buffer_size)
@@ -75,9 +63,23 @@ class ChatClient:
         if h == "HASH":
             self.socket.send(self.hash_key.encode())
         c = self.socket.recv(buffer_size).decode("ascii")
-        print(c)
-        self.threadsend.start()
+        app.text.insert("end",c ,"\n")
         self.threadrecv.start()
+
+    def input(self):
+        msg = app.entry.get()
+        final = username + ":" + msg
+        app.text.insert(customtkinter.END,msg+"\n")
+        app.entry.delete(0,customtkinter.END)
+        try:
+            self.socket.send((rsa.encrypt(final.encode("ascii"), self.serverkey)))
+            if msg == "quit":
+                self.socket.close()
+                app.quit()       
+        except Exception as e:
+            print(e)
+        
+        
 
     def recieve(self):
         while True:
@@ -93,26 +95,70 @@ class ChatClient:
                     + msg.split(":", 1)[1]
                     + Fore.RESET
                 )
+                app.text.insert(customtkinter.END,msg+"\n")
             except ConnectionAbortedError:
                 print("you closed the connection!")
                 self.socket.close()
                 break
-            except socket.error:
-                print("server was closed")
-                self.socket.close()
-                break
+            # except socket.error:
+            #     print("server was closed")
+            #     self.socket.close()
+            #     break
             except rsa.DecryptionError:
                 print("verification failed")
                 self.socket.close()
                 break
-            except:
-                print("an error occured")
+            except Exception as e:
+                print(e)
                 self.socket.close()
                 break
 
+class ToplevelWindow(customtkinter.CTkToplevel):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.geometry("200x200")
+        self.title("Username")
+        self.username = ""
+        self.label = customtkinter.CTkLabel(self, text="enter your name sir")
+        self.label.pack(padx=20, pady=20)
+        self.user = customtkinter.CTkEntry(self)
+        self.user.pack(padx=20, pady=20)
+        self.button = customtkinter.CTkButton(self, text="send",command=self.user_input)
+        self.button.pack(padx=20, pady=20)
+    
+    def user_input(self):
+        self.username = self.user.get() 
+        self.destroy()
+
+class App(customtkinter.CTk,ChatClient):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.geometry("350x500")
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure((0, 1), weight=1)
+        
+        self.text = customtkinter.CTkTextbox(self)
+        self.text.grid(row=0, column=0, columnspan=2, padx=20, pady=(20, 0), sticky="nsew")
+        self.entry = customtkinter.CTkEntry(self)
+        self.entry.grid(row=1, column=0, padx=20, pady=20, sticky="ew")
+        self.button = customtkinter.CTkButton(self,text="Send",command=client.input)
+        self.button.grid(row=1, column=1, padx=20, pady=20, sticky="ew")
+        self.toplevel_window = ToplevelWindow(self)
+        self.toplevel_window.focus_set() # create window if its None or destroyed
+        self.toplevel_window.grab_set()
+        self.toplevel_window.protocol('WM_DELETE_WINDOW', self.doSomething)
+        self.toplevel_window.wait_window()
+        self.user = self.toplevel_window.username
+
+    def doSomething(self):
+        if not self.toplevel_window.username:
+            pass
 
 if __name__ == "__main__":
-    username = input("choose your username sir: ")
     client = ChatClient("localhost", 7342)
+    app = App()
+    username = app.user
     client.generate()
     client.connect()
+    app.mainloop()
