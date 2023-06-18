@@ -7,7 +7,7 @@ buffer_size = 2048
 
 class ChatServer:
     def __init__(self, host, port):
-        """Initialise the server attributes."""
+        """Initializare atribute server."""
         self.host = host
         self.port = port
         self.th = threading.Thread(target=self.receive)
@@ -18,10 +18,40 @@ class ChatServer:
         self.read_selector = selectors.DefaultSelector()
         self.write_selector = selectors.DefaultSelector()
 
+    def init(self):
+        """Initializeaza socket-ul serverului."""
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.bind((self.host, self.port))
+        self.socket.listen()
+        # Put the socket in the selector "bag":
+        self.read_selector.register(
+            self.socket,
+            selectors.EVENT_READ,
+            self.accept,
+        )
+
+    def run(self):
+        """Pornește serverul și acceptă conexiuni pe termen nelimitat"""
+        self.init()
+        print("Serverul ruleaza...")
+        # se incarca cheia publica si privata
+        with open(
+            f"C:/Users/antonia/Desktop/Project/server_keys/pubKey.pem", "rb"
+        ) as f:
+            self.pubKey = rsa.PublicKey.load_pkcs1(f.read())
+        with open(
+            f"C:/Users/antonia/Desktop/Project/server_keys/privKey.pem", "rb"
+        ) as f:
+            self.privKey = rsa.PrivateKey.load_pkcs1(f.read())
+        while True:
+            for key, _ in self.read_selector.select():
+                sock, callback = key.fileobj, key.data
+                callback(sock)
+
     def accept(self, sock):
-        """Callback function for when the server is ready to accept a connection."""
+        """Funcție de apel invers pentru când serverul este pregătit să accepte o conexiune."""
         client, _ = sock.accept()
-        print("Registering client...")
+        print("Inregistrare client...")
         client.send(self.pubKey.save_pkcs1(format="DER"))
         client.send("KEY".encode("ascii"))
         stringkey = client.recv(buffer_size)
@@ -37,17 +67,16 @@ class ChatServer:
             if hashkey == hash_clientkey and rsa.verify(
                 message.encode(), signature, self.clientkey
             ):
-                print("verification successful")
+                print("Verificare reusita")
                 clients[client] = self.clientkey
-                client.send("connection was established".encode("ascii"))
                 self.read_selector.register(client, selectors.EVENT_READ, self.receive)
                 self.write_selector.register(client, selectors.EVENT_WRITE)
         except rsa.VerificationError:
-            print("verification failed")
+            print("Verificare nereusita")
             client.close()
 
     def receive(self, sock):
-        """Callback function for when a client socket is ready to receive."""
+        """Functie de apel invers pentru atunci cand un socket client este gata sa primeasca."""
         try:
             msg = rsa.decrypt(sock.recv(buffer_size), self.privKey).decode("ascii")
             if msg.split(":", 1)[1] != "quit":
@@ -57,40 +86,13 @@ class ChatServer:
                             rsa.encrypt(msg.encode("ascii"), clients[key.fileobj])
                         )
         except (ConnectionResetError, rsa.DecryptionError):
-            print("client disconnected")
+            print("Clientul s-a deconectat")
             self.read_selector.unregister(sock)
             self.write_selector.unregister(sock)
             del clients[sock]
             sock.close()
 
-    def init(self):
-        """Initialises the server socket."""
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.bind((self.host, self.port))
-        self.socket.listen()
-        # Put the socket in the selector "bag":
-        self.read_selector.register(
-            self.socket,
-            selectors.EVENT_READ,
-            self.accept,
-        )
 
-    def run(self):
-        """Starts the server and accepts connections indefinitely."""
-        self.init()
-        print("Running server...")
-        with open(
-            f"C:/Users/antonia/Desktop/Project/server_keys/pubKey.pem", "rb"
-        ) as f:
-            self.pubKey = rsa.PublicKey.load_pkcs1(f.read())
-        with open(
-            f"C:/Users/antonia/Desktop/Project/server_keys/privKey.pem", "rb"
-        ) as f:
-            self.privKey = rsa.PrivateKey.load_pkcs1(f.read())
-        while True:
-            for key, _ in self.read_selector.select():
-                sock, callback = key.fileobj, key.data
-                callback(sock)
 
 
 if __name__ == "__main__":
