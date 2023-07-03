@@ -1,4 +1,4 @@
-import selectors, socket, rsa, threading, hashlib, os
+import selectors, socket, rsa, threading, hashlib, os, random, glob
 
 
 clients = {}
@@ -18,6 +18,38 @@ class ChatServer:
         self.read_selector = selectors.DefaultSelector()
         self.write_selector = selectors.DefaultSelector()
 
+    def generate(self):
+        # se genereaza cheile in mod random ,se incarca in variabile si se sterg
+        number_start = random.randint(1, 1000)
+        number_count = random.randint(1, 20)
+        numbers = []
+        while len(numbers) < number_count:
+            numbers.append(number_start)
+            number_start += 1
+        (pubKey, privKey) = rsa.newkeys(buffer_size)
+        for i in numbers:
+            with open(
+                f"C:/Users/antonia/Desktop/Project/server_keys/pubKey{i}.pem", "wb+"
+            ) as f:
+                f.write(pubKey.save_pkcs1("PEM"))
+            with open(
+                f"C:/Users/antonia/Desktop/Project/server_keys/privKey{i}.pem", "wb+"
+            ) as f:
+                f.write(privKey.save_pkcs1("PEM"))
+        choice = random.choice(numbers)
+        with open(
+            f"C:/Users/antonia/Desktop/Project/server_keys/pubKey{choice}.pem", "rb"
+        ) as f:
+            self.pubKey = rsa.PublicKey.load_pkcs1(f.read())
+        with open(
+            f"C:/Users/antonia/Desktop/Project/server_keys/privKey{choice}.pem", "rb"
+        ) as f:
+            self.privKey = rsa.PrivateKey.load_pkcs1(f.read())
+        for filename in glob.glob(
+            f"C:/Users/antonia/Desktop/Project/server_keys/*.pem"
+        ):
+            os.remove(filename)
+
     def init(self):
         """Initializeaza socket-ul serverului."""
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -34,15 +66,6 @@ class ChatServer:
         """Pornește serverul și acceptă conexiuni pe termen nelimitat"""
         self.init()
         print("Serverul ruleaza...")
-        # se incarca cheia publica si privata
-        with open(
-            f"C:/Users/antonia/Desktop/Project/server_keys/pubKey.pem", "rb"
-        ) as f:
-            self.pubKey = rsa.PublicKey.load_pkcs1(f.read())
-        with open(
-            f"C:/Users/antonia/Desktop/Project/server_keys/privKey.pem", "rb"
-        ) as f:
-            self.privKey = rsa.PrivateKey.load_pkcs1(f.read())
         while True:
             for key, _ in self.read_selector.select():
                 sock, callback = key.fileobj, key.data
@@ -93,8 +116,7 @@ class ChatServer:
             sock.close()
 
 
-
-
 if __name__ == "__main__":
     cs = ChatServer("localhost", 7342)
+    cs.generate()
     cs.run()

@@ -1,8 +1,9 @@
-import threading, socket, rsa, random, os, glob, hashlib,customtkinter
+import threading, socket, rsa, random, os, glob, hashlib, customtkinter
 from colorama import Fore
 
 buffer_size = 2048
 username = ""
+
 
 class ChatClient:
     def __init__(self, host, port):
@@ -61,7 +62,7 @@ class ChatClient:
         popup.grab_set()
         var = customtkinter.StringVar()
         label = customtkinter.CTkLabel(popup, textvariable=var)
-        label.pack(padx=20,pady=20)
+        label.pack(padx=20, pady=20)
         var.set("conexiune stabilita" + "\n")
         k = self.socket.recv(buffer_size).decode("ascii")
         if k == "KEY":
@@ -71,48 +72,46 @@ class ChatClient:
         if h == "HASH":
             self.socket.send(self.hash_key.encode())
             var.set(var.get() + "verificarea cheii publice a avut succes" + "\n")
-        var.set(var.get() +"toate verificarile au fost reusite, conexiunea este sigura")
+        var.set(
+            var.get() + "toate verificarile au fost reusite, conexiunea este sigura"
+        )
         self.threadrecv.start()
-        
 
     def input(self):
         msg = app.entry.get()
         final = username + ":" + msg
         app.text.configure(state="normal")
-        app.text.insert(customtkinter.END,msg+"\n")
-        app.entry.delete(0,customtkinter.END)
+        app.text.insert(customtkinter.END, msg + "\n")
+        app.entry.delete(0, customtkinter.END)
         try:
             self.socket.send((rsa.encrypt(final.encode("ascii"), self.serverkey)))
             app.text.configure(state="disabled")
             if msg == "quit":
                 self.socket.close()
-                app.quit()       
+                app.quit()
         except Exception as e:
-            app.text.insert(customtkinter.END,e)
-        
-        
+            app.text.insert(customtkinter.END, e)
+
     def recieve(self):
         while True:
             try:
                 msg = rsa.decrypt(self.socket.recv(buffer_size), self.privkey).decode(
                     "ascii"
                 )
-                app.text.insert(customtkinter.END,msg+"\n")
+                app.text.insert(customtkinter.END, msg + "\n")
             except ConnectionAbortedError:
-                app.text.insert(customtkinter.END,"serverul a fost inchis")
                 self.socket.close()
                 break
             except rsa.DecryptionError:
-                app.text.insert(customtkinter.END,"verificarea a esuat")
+                app.text.insert(customtkinter.END, "verificarea a esuat")
                 self.socket.close()
                 break
-            except Exception as e:
-                app.text.insert(customtkinter.END,e)
+            except:
                 self.socket.close()
                 break
+
 
 class ToplevelWindow(customtkinter.CTkToplevel):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.geometry("200x200")
@@ -122,36 +121,42 @@ class ToplevelWindow(customtkinter.CTkToplevel):
         self.label.pack(padx=20, pady=20)
         self.user = customtkinter.CTkEntry(self)
         self.user.pack(padx=20, pady=20)
-        self.button = customtkinter.CTkButton(self, text="send",command=self.user_input)
+        self.button = customtkinter.CTkButton(
+            self, text="send", command=self.user_input
+        )
         self.button.pack(padx=20, pady=20)
-    
+
     def user_input(self):
         self.username = self.user.get()
         self.destroy()
         client.connect()
 
-class App(customtkinter.CTk,ChatClient):
+
+class App(customtkinter.CTk, ChatClient):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.geometry("350x500")
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure((0, 1), weight=1)
         self.text = customtkinter.CTkTextbox(self)
-        self.text.grid(row=0, column=0, columnspan=2, padx=20, pady=(20, 0), sticky="nsew")
+        self.text.grid(
+            row=0, column=0, columnspan=2, padx=20, pady=(20, 0), sticky="nsew"
+        )
         self.entry = customtkinter.CTkEntry(self)
         self.entry.grid(row=1, column=0, padx=20, pady=20, sticky="ew")
-        self.button = customtkinter.CTkButton(self,text="Send",command=client.input)
+        self.button = customtkinter.CTkButton(self, text="Send", command=client.input)
         self.button.grid(row=1, column=1, padx=20, pady=20, sticky="ew")
         self.toplevel_window = ToplevelWindow(self)
-        self.toplevel_window.focus_set() 
+        self.toplevel_window.focus_set()
         self.toplevel_window.grab_set()
-        self.toplevel_window.protocol('WM_DELETE_WINDOW', self.doSomething)
+        self.toplevel_window.protocol("WM_DELETE_WINDOW", self.doSomething)
         self.toplevel_window.wait_window()
         self.user = self.toplevel_window.username
-        
+
     def doSomething(self):
         if not self.toplevel_window.username:
             pass
+
 
 if __name__ == "__main__":
     client = ChatClient("localhost", 7342)
