@@ -1,18 +1,14 @@
 import threading, socket, rsa, random, os, glob, hashlib, customtkinter
-from colorama import Fore
 
 buffer_size = 2048
 username = ""
-
 
 class ChatClient:
     def __init__(self, host, port):
         self.host = host
         self.port = port
-        self.username = username
         self.pubkey, self.privkey = None, None
         self.serverkey = None
-        self.threadsend = threading.Thread(target=self.input)
         self.threadrecv = threading.Thread(target=self.recieve)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -51,41 +47,36 @@ class ChatClient:
             f"C:/Users/antonia/Desktop/Project/client_keys/*.pem"
         ):
             os.remove(filename)
-
+        
     def connect(self):
         self.socket.connect((self.host, self.port))
         self.stringkey = self.socket.recv(buffer_size)
         self.serverkey = rsa.PublicKey.load_pkcs1(self.stringkey, format="DER")
-        # app.var.set("connection succesful" + "\n")
-        popup = customtkinter.CTkToplevel()
-        popup.focus_set()
-        popup.grab_set()
+        connect = customtkinter.CTkToplevel()
+        connect.focus_set()
+        connect.grab_set()
         var = customtkinter.StringVar()
-        label = customtkinter.CTkLabel(popup, textvariable=var)
-        label.pack(padx=20, pady=20)
+        label = customtkinter.CTkLabel(connect, textvariable=var)
+        label.pack(padx=20,pady=20)
         var.set("conexiune stabilita" + "\n")
         k = self.socket.recv(buffer_size).decode("ascii")
         if k == "KEY":
-            self.socket.send(self.pubkey.save_pkcs1(format="DER"))
-            var.set(var.get() + "cheia publica a fost trimisa" + "\n")
-        h = self.socket.recv(buffer_size).decode("ascii")
-        if h == "HASH":
-            self.socket.send(self.hash_key.encode())
-            var.set(var.get() + "verificarea cheii publice a avut succes" + "\n")
-        var.set(
-            var.get() + "toate verificarile au fost reusite, conexiunea este sigura"
-        )
+            self.socket.send(self.pubkey.save_pkcs1(format="DER")+self.hash_key.encode())
+            var.set(var.get() + "cheie publica trimisa" + "\n")
+            var.set(var.get() +"verificarea cheii publice a fost reusita" + "\n")
+        
+        var.set(var.get() + "toate verificarile au avut succes")
         self.threadrecv.start()
+
+   
 
     def input(self):
         msg = app.entry.get()
         final = username + ":" + msg
-        app.text.configure(state="normal")
         app.text.insert(customtkinter.END, msg + "\n")
         app.entry.delete(0, customtkinter.END)
         try:
             self.socket.send((rsa.encrypt(final.encode("ascii"), self.serverkey)))
-            app.text.configure(state="disabled")
             if msg == "quit":
                 self.socket.close()
                 app.quit()
@@ -98,17 +89,24 @@ class ChatClient:
                 msg = rsa.decrypt(self.socket.recv(buffer_size), self.privkey).decode(
                     "ascii"
                 )
-                app.text.insert(customtkinter.END, msg + "\n")
+                if msg == "regenerate":
+                    self.generate()
+                    self.socket.send("ready".encode("ascii"))
+                    self.stringkey = self.socket.recv(buffer_size)
+                    self.serverkey = rsa.PublicKey.load_pkcs1(self.stringkey, format="DER")
+                    k = self.socket.recv(buffer_size).decode("ascii")
+                    if k == "KEY2":
+                        self.socket.send(self.pubkey.save_pkcs1(format="DER")+self.hash_key.encode())
+                        app.text.insert(customtkinter.END, "cheile au fost schimbate" + "\n")
+                else:
+                    app.text.insert(customtkinter.END, msg + "\n")
             except ConnectionAbortedError:
                 self.socket.close()
                 break
-            except rsa.DecryptionError:
-                app.text.insert(customtkinter.END, "verificarea a esuat")
-                self.socket.close()
+            except Exception as e:
+                print(e)
                 break
-            except:
-                self.socket.close()
-                break
+            
 
 
 class ToplevelWindow(customtkinter.CTkToplevel):
@@ -127,9 +125,13 @@ class ToplevelWindow(customtkinter.CTkToplevel):
         self.button.pack(padx=20, pady=20)
 
     def user_input(self):
-        self.username = self.user.get()
-        self.destroy()
-        client.connect()
+        if self.user.get():
+            self.username = self.user.get()
+            self.destroy()
+        else:
+            pass
+        
+        
 
 
 class App(customtkinter.CTk, ChatClient):
@@ -160,8 +162,9 @@ class App(customtkinter.CTk, ChatClient):
 
 if __name__ == "__main__":
     client = ChatClient("localhost", 7342)
-    client.generate()
     app = App()
     username = app.user
+    client.generate()
+    client.connect()
     app.mainloop()
     client.socket.close()
