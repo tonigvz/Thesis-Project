@@ -1,4 +1,10 @@
-import selectors, socket, rsa, threading, hashlib, os, random, glob,time
+import  socket, rsa
+from selectors import DefaultSelector,EVENT_READ,EVENT_WRITE
+from hashlib import sha256
+from random import randint,choice
+from os import remove
+from threading import Timer
+from glob import glob
 
 
 clients = {}
@@ -14,15 +20,15 @@ class ChatServer:
         self.socket = None
         self.pubKey, self.privKey = None, None
         self.clientkey = None
-        self.read_selector = selectors.DefaultSelector()
-        self.write_selector = selectors.DefaultSelector()
-        self.counter =  random.randint(60, 600)
-        self.timer = threading.Timer(self.counter, self.regenerate)
+        self.read_selector = DefaultSelector()
+        self.write_selector = DefaultSelector()
+        self.counter =  randint(60, 600)
+        self.timer = Timer(self.counter, self.regenerate)
 
     def generate(self):
         """Se genereaza cheile in mod random ,se incarca in variabile si se sterg"""
-        number_start = random.randint(1, 1000)
-        number_count = random.randint(1, 20)
+        number_start = randint(1, 1000)
+        number_count = randint(1, 20)
         numbers = []
         while len(numbers) < number_count:
             numbers.append(number_start)
@@ -37,19 +43,19 @@ class ChatServer:
                 f"C:/Users/antonia/Desktop/Project/server_keys/privKey{i}.pem", "wb+"
             ) as f:
                 f.write(privKey.save_pkcs1("PEM"))
-        choice = random.choice(numbers)
+        choicek = choice(numbers)
         with open(
-            f"C:/Users/antonia/Desktop/Project/server_keys/pubKey{choice}.pem", "rb"
+            f"C:/Users/antonia/Desktop/Project/server_keys/pubKey{choicek}.pem", "rb"
         ) as f:
             self.pubKey = rsa.PublicKey.load_pkcs1(f.read())
         with open(
-            f"C:/Users/antonia/Desktop/Project/server_keys/privKey{choice}.pem", "rb"
+            f"C:/Users/antonia/Desktop/Project/server_keys/privKey{choicek}.pem", "rb"
         ) as f:
             self.privKey = rsa.PrivateKey.load_pkcs1(f.read())
-        for filename in glob.glob(
+        for filename in glob(
             f"C:/Users/antonia/Desktop/Project/server_keys/*.pem"
         ):
-            os.remove(filename)
+            remove(filename)
         
 
 
@@ -61,7 +67,7 @@ class ChatServer:
         """Se pune socket-ul in spatiul de depozitare al selectorului"""
         self.read_selector.register(
             self.socket,
-            selectors.EVENT_READ,
+            EVENT_READ,
             self.accept,
         )  
 
@@ -71,7 +77,6 @@ class ChatServer:
         self.init()
         print("Serverul ruleaza...")
         self.timer.start()
-        print(self.counter)
         while True:
             for key, _ in self.read_selector.select():
                 sock, callback = key.fileobj, key.data
@@ -81,26 +86,25 @@ class ChatServer:
     def accept(self, sock):
         """Funcție de apel invers pentru când serverul este pregătit să accepte o conexiune."""
         client, _ = sock.accept()
-        print(self.counter)
         print("Inregistrare client...")
         client.send(self.pubKey.save_pkcs1(format="DER"))
         client.send("KEY".encode("ascii"))
         stringkey = client.recv(buffer_size)
         hashkey = stringkey[-64:].decode()
         self.clientkey = rsa.PublicKey.load_pkcs1(stringkey[:-64], format="DER")
-        hash_clientkey = hashlib.sha256(stringkey[:-64]).hexdigest()
+        hash_clientkey = sha256(stringkey[:-64]).hexdigest()
         message = "f9dFd!LVC76zmh"
         with open("C:/Users/antonia/Desktop/Project/signature", "rb") as f:
             signature = f.read()
-        os.remove("C:/Users/antonia/Desktop/Project/signature")
+        remove("C:/Users/antonia/Desktop/Project/signature")
         try:
             if hashkey == hash_clientkey and rsa.verify(
                 message.encode(), signature, self.clientkey
             ):
                 print("Verificare reusita")
                 clients[client] = self.clientkey
-                self.read_selector.register(client, selectors.EVENT_READ, self.receive)
-                self.write_selector.register(client, selectors.EVENT_WRITE)
+                self.read_selector.register(client, EVENT_READ, self.receive)
+                self.write_selector.register(client, EVENT_WRITE)
         except rsa.VerificationError:
             print("Verificare nereusita")
             client.close()
@@ -135,18 +139,18 @@ class ChatServer:
                         hashkey = stringkey[-64:].decode()
                         self.clientkey = rsa.PublicKey.load_pkcs1(stringkey[:-64], format="DER")
                         print("chei publice schimbate")
-                        hash_clientkey = hashlib.sha256(stringkey[:-64]).hexdigest()
+                        hash_clientkey = sha256(stringkey[:-64]).hexdigest()
                         message = "f9dFd!LVC76zmh"
                         with open("C:/Users/antonia/Desktop/Project/signature", "rb") as f:
                             signature = f.read()
-                        os.remove("C:/Users/antonia/Desktop/Project/signature")
+                        remove("C:/Users/antonia/Desktop/Project/signature")
                         print(signature)
                         print(hashkey,hash_clientkey)
                         if hashkey == hash_clientkey and rsa.verify(
                                 message.encode(), signature, self.clientkey
                             ):
                             clients[key] = self.clientkey
-                            self.counter =  random.randint(60, 600)
+                            self.counter =  randint(60, 600)
                         else:
                             print("Verificare nereusita")
                             key.close()

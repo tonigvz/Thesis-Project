@@ -1,4 +1,9 @@
-import threading, socket, rsa, random, os, glob, hashlib, customtkinter
+import  socket, rsa, customtkinter
+from threading import Thread
+from random import randint,choice
+from os import remove
+from glob import glob
+from hashlib import sha256
 
 buffer_size = 2048
 username = ""
@@ -9,12 +14,12 @@ class ChatClient:
         self.port = port
         self.pubkey, self.privkey = None, None
         self.serverkey = None
-        self.threadrecv = threading.Thread(target=self.recieve)
+        self.threadrecv = Thread(target=self.recieve)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def generate(self):
-        number_start = random.randint(1, 1000)
-        number_count = random.randint(1, 20)
+        number_start = randint(1, 1000)
+        number_count = randint(1, 20)
         numbers = []
         while len(numbers) < number_count:
             numbers.append(number_start)
@@ -29,24 +34,24 @@ class ChatClient:
                 f"C:/Users/antonia/Desktop/Project/client_keys/privKey{i}.pem", "wb+"
             ) as f:
                 f.write(cprivKey.save_pkcs1("PEM"))
-        choice = random.choice(numbers)
+        choicek = choice(numbers)
         with open(
-            f"C:/Users/antonia/Desktop/Project/client_keys/pubKey{choice}.pem", "rb"
+            f"C:/Users/antonia/Desktop/Project/client_keys/pubKey{choicek}.pem", "rb"
         ) as f:
             self.pubkey = rsa.PublicKey.load_pkcs1(f.read())
         with open(
-            f"C:/Users/antonia/Desktop/Project/client_keys/privKey{choice}.pem", "rb"
+            f"C:/Users/antonia/Desktop/Project/client_keys/privKey{choicek}.pem", "rb"
         ) as f:
             self.privkey = rsa.PrivateKey.load_pkcs1(f.read())
         message = "f9dFd!LVC76zmh"
         signature = rsa.sign(message.encode(), self.privkey, "SHA-256")
-        self.hash_key = hashlib.sha256(self.pubkey.save_pkcs1(format="DER")).hexdigest()
+        self.hash_key = sha256(self.pubkey.save_pkcs1(format="DER")).hexdigest()
         with open("signature", "wb") as f:
             f.write(signature)
-        for filename in glob.glob(
+        for filename in glob(
             f"C:/Users/antonia/Desktop/Project/client_keys/*.pem"
         ):
-            os.remove(filename)
+            remove(filename)
         
     def connect(self):
         self.socket.connect((self.host, self.port))
