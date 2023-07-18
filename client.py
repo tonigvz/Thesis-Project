@@ -1,6 +1,6 @@
 import  socket, rsa, customtkinter
 from threading import Thread
-from random import randint,choice
+from secrets import randbelow,choice
 from os import remove
 from glob import glob
 from hashlib import sha256
@@ -9,7 +9,7 @@ buffer_size = 2048
 username = ""
 
 class ChatClient:
-    def __init__(self, host, port):
+    def __init__(self, host, port): 
         self.host = host
         self.port = port
         self.pubkey, self.privkey = None, None
@@ -18,8 +18,8 @@ class ChatClient:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def generate(self):
-        number_start = randint(1, 1000)
-        number_count = randint(1, 20)
+        number_start = randbelow(1000)
+        number_count = randbelow(20)
         numbers = []
         while len(numbers) < number_count:
             numbers.append(number_start)
@@ -137,8 +137,6 @@ class ToplevelWindow(customtkinter.CTkToplevel):
             pass
         
         
-
-
 class App(customtkinter.CTk, ChatClient):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -1,7 +1,7 @@
 import  socket, rsa
 from selectors import DefaultSelector,EVENT_READ,EVENT_WRITE
 from hashlib import sha256
-from random import randint,choice
+from secrets import randbelow,choice
 from os import remove
 from threading import Timer
 from glob import glob
@@ -22,13 +22,13 @@ class ChatServer:
         self.clientkey = None
         self.read_selector = DefaultSelector()
         self.write_selector = DefaultSelector()
-        self.counter =  randint(60, 600)
+        self.counter =  choice(range(60, 600))
         self.timer = Timer(self.counter, self.regenerate)
 
     def generate(self):
         """Se genereaza cheile in mod random ,se incarca in variabile si se sterg"""
-        number_start = randint(1, 1000)
-        number_count = randint(1, 20)
+        number_start = randbelow(1000)
+        number_count = randbelow(20)
         numbers = []
         while len(numbers) < number_count:
             numbers.append(number_start)
@@ -144,15 +144,14 @@ class ChatServer:
                         with open("C:/Users/antonia/Desktop/Project/signature", "rb") as f:
                             signature = f.read()
                         remove("C:/Users/antonia/Desktop/Project/signature")
-                        print(signature)
-                        print(hashkey,hash_clientkey)
                         if hashkey == hash_clientkey and rsa.verify(
                                 message.encode(), signature, self.clientkey
                             ):
                             clients[key] = self.clientkey
-                            self.counter =  randint(60, 600)
+                            print("Verificare reusita!!!")
+                            self.counter =  choice(range(60, 600))
                         else:
-                            print("Verificare nereusita")
+                            print("Verificare nereusita!!!")
                             key.close()
 
         
